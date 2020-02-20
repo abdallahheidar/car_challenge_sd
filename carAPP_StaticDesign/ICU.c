@@ -1,48 +1,19 @@
 /*
- * ICU.c
+ * SwICU.c
  *
  *  Author: Abdallah Heidar
  */ 
 
-
-/************************************************************************/
-/*				               Includes                                 */
-/************************************************************************/
-
 #include "ICU.h"
+#include "Timer.h"
+#include "DIO.h"
+#include "registers.h"
 
+/*-----------------[ Static Globals ]--------------*/
 
-/************************************************************************/
-/*				 Global / Static Variables						       */
-/************************************************************************/
-
-volatile uint32_t * gu32_timeCount = 0 ; 
-volatile uint16_t gu16_RiseToRise = 0 ;
-volatile uint16_t gu16_RiseToFall = 0 ;
-uint16_t TICK_TIME = 0 ;
-volatile uint8_t gu8_OVFs = 0 ;
-
-#define  FCPU		16
-#define  Prescaler	1024
-
-/************************************************************************/
-/*			  Structures Definitions		                            */
-/************************************************************************/
-
-
-struct Icu_cfg_s Icu_Cfg ={
-	ICU_CH2,       	  /* To choose the External Interrupt number */
-	ICU_TIMER_CH0     /* To choose the Timer number */
-	
-};
-
-
-
-static void extInt_CBK_Func(void);
-
-/************************************************************************/
-/*				          Functions' IMPLEMENTATION                     */
-/************************************************************************/
+volatile static uint16_t g_TMR2OVF_C  = 0;
+volatile static uint8_t  g_distance   = 0;
+volatile static EN_SwICU_Edge_t  g_SwICU_Edge = 0;
 
 /**************************************************************************
  * Function 	: Icu_Init                                                *
@@ -54,44 +25,49 @@ static void extInt_CBK_Func(void);
  * Description  : Initializes the ICU by initializing the timer			  *
  * 				  and enabling the global interrupt						  *
  **************************************************************************/
-ERROR_STATUS Icu_Init(Icu_cfg_s * Icu_Cfg){
-	 
-	 ERROR_STATUS status = E_OK;
-	 
-     /*
-	  TIMER initialize to count during edges
-     */
-		if (Icu_Cfg == NULL)
-		{
-			status = E_NOK;
-		}
-		
-        Timer_cfg_s str_Timer_cfg = {
-        	Icu_Cfg->ICU_Ch_Timer,
-        	TIMER_MODE,
-        	TIMER_INTERRUPT_MODE,
-        	TIMER_PRESCALER_1024
-        };
-        
-		 TICK_TIME = Prescaler / FCPU;
-		 
-	 status = Timer_Init(&str_Timer_cfg);
-	 status = Timer_Start(Icu_Cfg->ICU_Ch_Timer, 0);
+ERROR_STATUS Icu_Init(Icu_cfg_s * Icu_Cfg)
+{
+	ERROR_STATUS errorStatus = E_NOK;
+	Timer_cfg_s ICU_TMR;
+	DIO_Cfg_s ICU_Pin;
+	g_SwICU_Edge = SwICU_EdgeRising;
 	
-/*
-	external interrupts to sense the edges
-*/
-			
-			status = EXT_INT_SetEdge(EXT_INT2_FALLING_EDGE);
-
-			status = EXT_INT_Enable(Icu_Cfg->ICU_Ch_No);
-			
-//			set_callback(extInt_CBK_Func);
-
+	// Configure The ICU IO Pin
+	ICU_Pin.GPIO = ICU_CH2_GPIO;
+	ICU_Pin.pins = ICU_CH2_BIT;
+	ICU_Pin.dir = INPUT;
+	DIO_init(&ICU_Pin);
 	
-	return status;
+	// Configure The Timer Dedicated To swICU
+	ICU_TMR.Timer_CH_NO = Icu_Cfg->ICU_Ch_Timer;
+	ICU_TMR.Timer_Mode = TIMER_MODE;
+	ICU_TMR.Timer_Prescaler = TIMER_PRESCALER_8;
+	ICU_TMR.Timer_Polling_Or_Interrupt = TIMER_INTERRUPT_MODE;
+	
+	// Set The Interrupt Trigger Edge For The ICU Input Signal
+	switch(g_SwICU_Edge)
+	{
+		case SwICU_EdgeRising:
+				SET_BIT(MCUCSR, 6);
+				break;
+		case SwICU_EdgeFalling:
+				CLEAR_BIT(MCUCSR, 6);
+				break;
+		default:
+		        break;
+	}
+	
+	// Enable The External INT
+	GICR |= 0x20;
+	SREG |= (0x80);
+	
+	// Initialize & Start The ICU Timer Module
+	Timer_Init(&ICU_TMR);
+	Timer_Start(ICU_TMR.Timer_CH_NO, 255);
+	errorStatus = E_OK;
+	
+	return errorStatus;
 }
-
 /***************************************************************************
  * Function		: Icu_ReadTime
  * Input		: 
@@ -111,98 +87,51 @@ ERROR_STATUS Icu_Init(Icu_cfg_s * Icu_Cfg){
  *				  - E_NOK : not successful								   *
  * Description	: calculates the time between 2 edges				       *
  ***************************************************************************/
-
-ERROR_STATUS Icu_ReadTime(uint8_t Icu_Channel,
-						  uint8_t Icu_EdgeToEdge,
-						  uint32_t* Icu_Time)
+ERROR_STATUS Icu_ReadTime(uint8_t Icu_Channel, uint8_t Icu_EdgeToEdge, uint32_t * Icu_Time)
 {
-	ERROR_STATUS status = E_OK;
+	ERROR_STATUS errorStatus = E_NOK;
+	uint16_t ticks = 0;
 	
+	// Get The Total Timer Ticks
+	Timer_GetValue(TIMER_CH2, &ticks);
+	ticks += (g_TMR2OVF_C << 8);
+	*Icu_Time = (ticks >> 1);
+	Timer_Stop(TIMER_CH2);
 	
-		switch(Icu_Channel){
-			
-			case ICU_TIMER_CH2:
-			case ICU_TIMER_CH1:
-			break;
-			
-			case ICU_TIMER_CH0:
-			
-			
-					switch(Icu_EdgeToEdge){
-						
-						case ICU_RISE_TO_RISE:
-								
-								*Icu_Time = gu16_RiseToRise *TICK_TIME;
-						break;
-						case ICU_RISE_TO_FALL:
-						
-								*Icu_Time = gu16_RiseToFall * TICK_TIME;
-						break;
-						case ICU_FALE_TO_RISE:
-						
-								*Icu_Time = (gu16_RiseToRise - gu16_RiseToFall)* TICK_TIME;
-						break;
-						
-						default: 
-								status = E_NOK;
-					}
+	// Calculate & Update The Distance (To Be Used By The Ultrasonic Module)
+	g_distance = *Icu_Time / 58.0;
+	errorStatus = E_OK;
 	
-			break;
-			
-			default:
-					status = E_NOK;
-			}
-		return status;
+	return errorStatus;
 }
 
+void Us_Read(uint8_t* a_dist)
+{
+	*a_dist = g_distance;
+}
 
-/* External Interrupt 2 vector */
+/*****************************************
+*				ISR Handlers			 *
+******************************************/
+
+ISR(TIMER2_COMP_vect){
+	TCNT2 = 0x00;
+	g_TMR2OVF_C++;
+}
 
 ISR(INT2_vect)
 {
-	static volatile uint8_t edgeDetect = EXT_INT2_RISING_EDGE;
-	
-		switch(edgeDetect){
-			
-	            case EXT_INT2_RISING_EDGE :
-	            
-	            		Timer_GetValue(ICU_TIMER_CH0, &gu16_RiseToRise);
-	            		Timer_Start(ICU_TIMER_CH0, 0);
-	            	
-	            		//EXT_INT_Disable(ICU_CH2);
-	            		EXT_INT_SetEdge(EXT_INT2_FALLING_EDGE);
-	            		//EXT_INT_Enable(ICU_CH2);
-	            		
-	            		//MCUCSR = ~ 0x40;
-	            		edgeDetect = EXT_INT2_FALLING_EDGE;
-	            	//	PORTA_DATA = gu16_RiseToRise ;
-	            
-	            	  break;
-					  
-	            case  EXT_INT2_FALLING_EDGE:
-	            
-	            	Timer_GetValue(ICU_TIMER_CH0, &gu16_RiseToFall);
-	            
-	            	//EXT_INT_Disable(ICU_CH2);
-	            	EXT_INT_SetEdge(EXT_INT2_RISING_EDGE);
-	            	//EXT_INT_Enable(ICU_CH2);
-	            	
-	            	//MCUCSR |= 0x40;
-	            	edgeDetect = EXT_INT2_RISING_EDGE;
-	            	//PORTC_DATA = gu16_RiseToFall;
-	            
-				break;
-	            	
-					default: break;
-		}
-		
-}
-
-/*timer overflow vector */
-
-ISR(TIMER0_OVF_vect){
-	
-gu8_OVFs++;
-//Timer_Stop(0);
-
+	if(g_SwICU_Edge == SwICU_EdgeRising)
+	{
+		MCUCSR ^= (1 << 6);
+		g_SwICU_Edge = SwICU_EdgeFalling;
+		g_TMR2OVF_C = 0;
+		Timer_Start(TIMER_CH2, 255);
+	}
+	else if(g_SwICU_Edge == SwICU_EdgeFalling)
+	{
+		MCUCSR ^= (1 << 6);
+		g_SwICU_Edge = SwICU_EdgeRising;
+		Timer_Stop(TIMER_CH2);
+	}
 }

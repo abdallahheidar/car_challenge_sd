@@ -8,9 +8,9 @@
 #ifndef STEERING_H_
 #define STEERING_H_
 
-/************************************************************************/
-/*				 INCLUDES			        */
-/************************************************************************/
+/************************************************************************
+*								 INCLUDES							    *
+************************************************************************/
 
 #include "std_types.h"
 #include "motor.h"
@@ -20,10 +20,11 @@
  */
 
 /************************************************************************/
-/*				 DEFINES			        */
+/*								 DEFINES						        */
 /************************************************************************/
 
-/*Command Macros to call the steering api*/
+/* Command Macros to call the steering API */
+
 #define		CAR_STOP		0
 #define		CAR_FORWARD		1
 #define		CAR_BACKWARD	2
@@ -44,7 +45,7 @@
  * 							
  */
 
-ERROR_STATUS Steering_Init(void);
+extern ERROR_STATUS Steering_Init(void);
 
 /**
  * Input: 
@@ -56,10 +57,7 @@ ERROR_STATUS Steering_Init(void);
  * Description: This funtion controls the command and the speed of the car.
  * 							
  */
-ERROR_STATUS Steering_SteerCar(uint8_t Steering_CarCmd, uint8_t speed);
-
-
-
+extern ERROR_STATUS Steering_SteerCar(uint8_t Steering_CarCmd, uint8_t speed);
 
 
 #endif /* STEERING_H_ */

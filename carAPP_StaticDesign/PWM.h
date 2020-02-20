@@ -2,64 +2,40 @@
 /* Layer: MCAL                                     */
 /* Module: PWM                                     */
 /* File: PWM.h                                     */
-/* Author: Team A                                  */
+/* Author: Khaldoon                                */
 /* Description: PWM header file                    */
 /***************************************************/
-
 #ifndef PWM_H_
 #define PWM_H_
 
-/************************************************************************/
-/*				 INCLUDES			        */
-/************************************************************************/
-
+/*********************************/
+/*            MACROS             */
+/*********************************/
 
 
 #include "std_types.h"
 #include "registers.h"
-#include "DIO.h"
 #include "Timer.h"
+#include "DIO.h"
 
-/************************************************************************/
-/*				 DEFINES			        */
-/************************************************************************/
-
-
-#define  FCPU	16000000ul
 
 #define PWM_CH0  (0)
 #define PWM_CH1A (1)
 #define PWM_CH1B (2)
 #define PWM_CH2  (3)
 
-#define		PWM_PRESCALER_NO				(0)
-#define		PWM_PRESCALER_8					(1)
-#define		PWM_PRESCALER_32				(2)
-#define		PWM_PRESCALER_64				(3)
-#define		PWM_PRESCALER_128				(4)
-#define		PWM_PRESCALER_256				(5)
-#define		PWM_PRESCALER_1024				(6)
+#define PWM1A_GPIO GPIOD
+#define PWM1A_BIT  BIT5
+#define PWM1B_GPIO GPIOD
+#define PWM1B_BIT  BIT4
 
-#define		WGM00				0x60
-#define		WGM01				0x08
-
-#define		WGM20				0x60
-#define		WGM21				0x08
-
-#define		COM00				0x10
-#define		COM01				0x28
-
-#define		WGM10				0x01
-#define		WGM11				0x02
-#define		WGM12				0x08
-#define		WGM13				0x10
-
-
-#define		COM1A0				0x40
-#define		COM1A1				0x80
-#define		COM1B0				0x10
-#define		COM1B1				0x20
-
+#define	PWM_PRESCALER_NO	(0)
+#define	PWM_PRESCALER_8		(1)
+#define	PWM_PRESCALER_32	(2)
+#define	PWM_PRESCALER_64	(3)
+#define	PWM_PRESCALER_128	(4)
+#define	PWM_PRESCALER_256	(5)
+#define	PWM_PRESCALER_1024	(6)
 
 typedef struct Pwm_Cfg_s
 {
@@ -67,9 +43,9 @@ typedef struct Pwm_Cfg_s
 	uint8_t Prescaler;
 }Pwm_Cfg_s;
 
-/************************************************************************/
-/*		         TIMER FUNCTIONS' PROTOTYPES		                    */
-/************************************************************************/
+/*********************************/
+/*    FUNCTIONS DECLARATION      */
+/*********************************/
 
 /*********************************************************************************/
 /* Function: Error_State Pwm_Init(Pwm_Cfg_s *Pwm_Cfg);                         */

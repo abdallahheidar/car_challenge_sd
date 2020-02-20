@@ -8,15 +8,12 @@
 #ifndef US_H_
 #define US_H_
 
-/************************************************************************/
-/*				 INCLUDES			        */
-/************************************************************************/
 
 
-#include "ICU.h"
 #include "std_types.h"
-#include "softwareDelay.h"
-
+#include "TimerDelay.h"
+#include "DIO.h"
+#include "ICU.h"
 
 /************************************************************************/
 /*				   functions' prototypes	                            */
@@ -35,9 +32,7 @@
  *                                                                                                  *
  ***************************************************************************************************/
 
-
-
-ERROR_STATUS Us_Init(void);
+extern ERROR_STATUS Us_Init(void);
 
 /**************************************************************************************************
  * Function Name    : Us_Trigger.                                                                 *
@@ -49,7 +44,7 @@ ERROR_STATUS Us_Init(void);
  *                    the  ECUO signal                                                            *
  *************************************************************************************************/
 
-ERROR_STATUS Us_Trigger(void);
+extern ERROR_STATUS Us_Trigger(void);
 
 /**************************************************************************************************
  * Function Name    : Us_GetDistance.                                                             *
@@ -62,7 +57,7 @@ ERROR_STATUS Us_Trigger(void);
  *                    Distance parameter.                                                         *
  *************************************************************************************************/
 
-ERROR_STATUS Us_GetDistance(uint8_t *Distance);
+extern ERROR_STATUS Us_GetDistance(uint8_t *Distance);
 
 
 #endif /* US_H_ */

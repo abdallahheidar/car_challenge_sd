@@ -14,42 +14,39 @@
 #include "DIO.h"
 #include "PWM.h"
 
-
 /*********************************************
  *				Defines  					 *
  ********************************************/
 
+#define Fpwm			200
 
-#define  MOTOR_FREQUENCY	50
+#define MOTOR_1			1
+#define MOTOR_2 		2
 
-#define MOTOR_1				0
-#define MOTOR_2 			1
+#define MOTOR_STOP 		0
+#define MOTOR_FORWARD 	1
+#define MOTOR_BACKWARD 	2
 
-#define  INITIALIZED		 1 
-#define  NOT_INITIALIZED	 0 
+//--------------------[ Motor Control Pin Definitions ]---------------------
+//--------------------------------------------------------------------------
 
-#define MOTOR_STOP 			0
-#define MOTOR_FORWARD 		1
-#define MOTOR_BACKWARD 		2
+#define M1EN_GPIO	(GPIOD)
+#define M1EN_BIT	(BIT4)
 
-#define MOTORS_NUMBER		2
+#define M2EN_GPIO	(GPIOD)
+#define M2EN_BIT	(BIT5)
 
-#define MOTOR_EN_1_GPIO		(GPIOD)
-#define MOTOR_EN_1_BIT		(BIT4)
+#define M1D1_GPIO	(GPIOD)
+#define M1D1_BIT	(BIT2)
 
-#define MOTOR_OUT_1A_GPIO	(GPIOD)
-#define MOTOR_OUT_1B_GPIO	(GPIOD)
-#define MOTOR_OUT_1A_BIT	(BIT2)
-#define MOTOR_OUT_1B_BIT	(BIT3)
+#define M1D2_GPIO	(GPIOD)
+#define M1D2_BIT	(BIT3)
 
+#define M2D1_GPIO	(GPIOD)
+#define M2D1_BIT	(BIT6)
 
-#define MOTOR_EN_2_GPIO		(GPIOD)
-#define MOTOR_EN_2_BIT		(BIT5)
-
-#define MOTOR_OUT_2A_GPIO	(GPIOD)
-#define MOTOR_OUT_2B_GPIO	(GPIOD)
-#define MOTOR_OUT_2A_BIT	(BIT6)
-#define MOTOR_OUT_2B_BIT	(BIT7)
+#define M2D2_GPIO	(GPIOD)
+#define M2D2_BIT	(BIT7)
 
 /*********************************************
  *	  	   Function prototypes				 *
@@ -65,7 +62,7 @@
  * Return		: ERROR_STATUS
  * Description	: Initialize (Enable, IN1, IN2) pins as digital outputs.
  */
- ERROR_STATUS Motor_Init(uint8_t Motor_Number);
+ ERROR_STATUS Motor_Init(uint8_t u8_Motor_Number);
  
 /**
  * Fun		 : Motor_Direction
@@ -129,6 +126,6 @@ ERROR_STATUS Motor_Stop(uint8_t Motor_Number);
  * Return		: Initialization_STATUS
  * Description	: Returns status of the motor whether intialized or not
  */
- ERROR_STATUS Motor_GetStatus(uint8_t Motor_Number, uint8_t* Mot_status);
+ERROR_STATUS Motor_GetStatus(uint8_t Motor_Number, uint8_t* Mot_status);
 
 #endif // MOTOR_H_

@@ -4,42 +4,78 @@
  *  Author: Abdallah Heidar
  */ 
 
-
-/************************************************************************/
-/*				 INCLUDES			        */
-/************************************************************************/
-
 #include "Timer.h"
 
 
-/************************************************************************/
-/*				 Global / Static Variables						       */
-/************************************************************************/
 
+//----------------[ TIMER0 Definitions ]-----------------
+//-------------------------------------------------------
+#define		Timer0_CMP_Mask						0x08
+#define 	Timer0_TCNT_INIT_Mask				0x00
+#define 	Timer0_Int_CLR_Mask					0xFC
+#define 	Timer0_Polling_Int_Mask				0x00
+#define 	Timer0_Interrupt_OVF_Int_Mask		0x01
+#define 	Timer0_Interrupt_CMP_Int_Mask		0x02
+#define		TIMER0_NO_CLOCK						0x00
+#define		TIMER0_PRESCALER_NO					0x01
+#define		TIMER0_PRESCALER_8					0x02
+#define		TIMER0_PRESCALER_64					0x03
+#define		TIMER0_PRESCALER_128				0x04
+#define		TIMER0_PRESCALER_1024				0x05
+#define		TIMER0_COUNTER_FALLING				0X06
+#define		TIMER0_COUNTER_RISING				0X07
+//=======================================================
+//----------------[ TIMER1 Definitions ]-----------------
+//-------------------------------------------------------
+#define 	Timer1_CMP_Mask						0x0008
+#define 	Timer1_TCNT_INIT_Mask				0x0000
+#define 	Timer1_Int_CLR_Mask					0xC3
+#define 	Timer1_Polling_Int_Mask				0x00
+#define 	Timer1_OCA_Int_Mask					0x10
+#define		TIMER1_NO_CLOCK						0x0000
+#define		TIMER1_PRESCALER_NO					0x0001
+#define		TIMER1_PRESCALER_8					0x0002
+#define		TIMER1_PRESCALER_64					0x0003
+#define		TIMER1_PRESCALER_128				0x0004
+#define		TIMER1_PRESCALER_1024				0x0005
+#define		TIMER1_COUNTER_FALLING				0X0006
+#define		TIMER1_COUNTER_RISING				0X0007
+//=======================================================
+//----------------[ TIMER2 Definitions ]-----------------
+//-------------------------------------------------------
+#define 	Timer2_CMP_Mask						0x08
+#define 	Timer2_TCNT_INIT_Mask				0x00
+#define 	Timer2_Int_CLR_Mask					0x3F
+#define 	Timer2_Polling_Int_Mask				0x00
+#define 	Timer2_Interrupt_CMP_Int_Mask		0x80
+#define 	Timer2_Interrupt_OVF_Int_Mask		0x40
+#define		TIMER2_NO_CLOCK						0x00
+#define		TIMER2_PRESCALER_NO					0x01
+#define		TIMER2_PRESCALER_8					0x02
+#define		TIMER2_PRESCALER_32					0x03
+#define		TIMER2_PRESCALER_64					0x04
+#define		TIMER2_PRESCALER_128				0x05
+#define		TIMER2_PRESCALER_256				0x06
+#define		TIMER2_PRESCALER_1024				0x07
+//=======================================================
+//------------------[ Static Globals ]-------------------
+//-------------------------------------------------------
 
-uint8_t gu8_Prescaler;
-uint8_t gu8_Timer0initFlag = NOT_INITIALIZED;
-uint8_t gu8_Timer1initFlag = NOT_INITIALIZED;
-uint8_t gu8_Timer2initFlag = NOT_INITIALIZED;
+// Static Variables
 
-/************************************************************************/
-/*			  Structures Definitions		                            */
-/************************************************************************/
+static uint8_t Timer0_Prescaler;
+static uint16_t Timer1_Prescaler;
+static uint8_t Timer2_Prescaler;
 
+// Static Functions
 
-/* the initialized struct*/
-struct Timer_cfg_s st_Timer_cfg={
-	TIMER_CH0,
-	TIMER_MODE,
-	TIMER_INTERRUPT_MODE,
-	TIMER_PRESCALER_1024
-};
+static ERROR_STATUS Timer0_Init(Timer_cfg_s* Timer_cfg);
+static ERROR_STATUS Timer1_Init(Timer_cfg_s* Timer_cfg);
+static ERROR_STATUS Timer2_Init(Timer_cfg_s* Timer_cfg);
 
-
-/************************************************************************/
-/*		         TIMER FUNCTIONS' implementation				        */
-/************************************************************************/
-
+//=======================================================
+//--------------[ Functions Definitions ]----------------
+//-------------------------------------------------------
 
 /**
  * Input: Pointer to a structure contains the information needed to initialize the timer. 
@@ -49,149 +85,273 @@ struct Timer_cfg_s st_Timer_cfg={
  * Description: Initiates the module.
  * 							
  */
-
-
 ERROR_STATUS Timer_Init(Timer_cfg_s* Timer_cfg)
 {
-	
-	ERROR_STATUS status = E_OK;
-	
-	if (Timer_cfg == NULL)
+	ERROR_STATUS errorStatus = E_NOK;
+	if(Timer_cfg != NULL)
 	{
-		status =  E_NOK;
-	}else 
+		// Check The Timer Channel Number & Init The Corresponding One
+		switch(Timer_cfg->Timer_CH_NO)
+		{
+			case TIMER_CH0 :
+				errorStatus = Timer0_Init(Timer_cfg);
+				break;
+			case TIMER_CH1 :
+				errorStatus = Timer1_Init(Timer_cfg);
+				break;
+			case TIMER_CH2 :
+				errorStatus = Timer2_Init(Timer_cfg);
+				break;
+			default :
+				errorStatus = E_NOK;
+				break;
+		}
+	}
+	else
 	{
-		/* start the initialization process */ 
-		 if (Timer_cfg->Timer_CH_NO > TIMER_CHANNEL_NUMBER)
-		 {
-			 status = E_NOK;
-		 }else
-		 { 
-		switch(Timer_cfg->Timer_CH_NO){
-			
-			case TIMER_CH0:
-			
-				switch(Timer_cfg->Timer_Mode){
-					
-					case COUNTER_RISING_MODE:
-							gu8_Prescaler = TIMER0_COUNTER_RISING;
-							 break;
-						 
-				    case COUNTER_FALLING_MODE:
-							gu8_Prescaler = TIMER0_COUNTER_FALLING;
-						 break;
-						 
-					case TIMER_MODE:
-							gu8_Prescaler = Timer_cfg->Timer_Prescaler; 
-					     break;
-						 
-					default:
-							status = E_NOK;
-				}
-				
-				switch(Timer_cfg->Timer_Polling_Or_Interrupt){
-					
-					case TIMER_POLLING_MODE:
-						TIMSK &= ~(TOIE0);
-						break;
-						
-					case TIMER_INTERRUPT_MODE:
-						TIMSK |= (TOIE0);
-						break;
-						
-					default:
-						status = E_NOK;
-				}
-				
-				gu8_Timer0initFlag = INITIALIZED;
-				
-				break;
-			
-			case TIMER_CH1:
-			
-			switch(Timer_cfg->Timer_Mode){
-				
-				case COUNTER_RISING_MODE:
-						gu8_Prescaler = TIMER1_COUNTER_RISING;
-						break;
-				
-				case COUNTER_FALLING_MODE:
-						gu8_Prescaler = TIMER1_COUNTER_FALLING;
-						break;
-				
-				case TIMER_MODE:
-						gu8_Prescaler = Timer_cfg->Timer_Prescaler;
-						break;
-				default:
-						status = E_NOK;
-			}
-			
-			switch(Timer_cfg->Timer_Polling_Or_Interrupt){
-				
-				case TIMER_POLLING_MODE:
-				TIMSK &= ~(TOIE1);
-				break;
-				
-				case TIMER_INTERRUPT_MODE:
-				TIMSK |= (TOIE1);
-				break;
-				
-				default:
-					status = E_NOK;
-			}
-			
-				gu8_Timer1initFlag = INITIALIZED;
-			
-				break;
-				
-			case TIMER_CH2:
-				
-				switch(Timer_cfg->Timer_Mode){
-					
-					case COUNTER_RISING_MODE:
-							gu8_Prescaler = TIMER0_COUNTER_RISING;
-							break;
-					
-					case COUNTER_FALLING_MODE:
-							gu8_Prescaler = TIMER0_COUNTER_FALLING;
-							break;
-					
-					case TIMER_MODE:
-							gu8_Prescaler = Timer_cfg->Timer_Prescaler;
-							break;
-					
-					default:
-							status = E_NOK;
-				}
-				
-				switch(Timer_cfg->Timer_Polling_Or_Interrupt){
-					
-					case TIMER_POLLING_MODE:
-							TIMSK &= ~(TOIE2);
-							break;
-					
-					case TIMER_INTERRUPT_MODE:
-							TIMSK |= (TOIE2);
-							break;
-					
-					default:
-							status = E_NOK;
-					}
-				
-					gu8_Timer2initFlag = INITIALIZED;
-				
-					break;
-					
-				default:
-						status = E_NOK;
-				} /*end of switch */
-	     	} /* end of else */
-	} /* end of outer else */ 
-	return status;
+		errorStatus = E_NOK;
+	}
+	return errorStatus;
 }
-	
-	
-	 
+
+static ERROR_STATUS Timer0_Init(Timer_cfg_s* Timer_cfg)
+{
+	ERROR_STATUS errorStatus = E_NOK;
+	if(Timer_cfg != NULL)
+	{
+		TCCR0 =  Timer0_CMP_Mask;
+		OCR0  =  0x00;
+		TIMSK &= Timer0_Int_CLR_Mask;
+		switch(Timer_cfg->Timer_Polling_Or_Interrupt)
+		{
+			case TIMER_POLLING_MODE :
+				TIMSK |= Timer0_Polling_Int_Mask;
+				errorStatus = E_OK;
+				break;
+			case TIMER_INTERRUPT_MODE :
+				TIMSK |= Timer0_Interrupt_CMP_Int_Mask;
+				errorStatus = E_OK;
+				break;
+			default :
+				errorStatus = E_NOK;
+				break;
+		}
+		switch(Timer_cfg->Timer_Mode)
+		{
+			case TIMER_MODE :
+				switch(Timer_cfg->Timer_Prescaler)
+				{
+					case TIMER_NO_CLOCK :
+						Timer0_Prescaler = TIMER0_NO_CLOCK;
+						errorStatus = E_OK;
+						break;
+					case TIMER_PRESCALER_8 :
+						Timer0_Prescaler = TIMER0_PRESCALER_8;
+						errorStatus = E_OK;
+						break;
+					case TIMER_PRESCALER_32 :
+						Timer0_Prescaler = TIMER0_NO_CLOCK;
+						errorStatus = E_NOK;
+						break;
+					case TIMER_PRESCALER_64 :
+						Timer0_Prescaler = TIMER0_PRESCALER_64;
+						errorStatus = E_OK;
+						break;
+					case TIMER_PRESCALER_128 :
+						Timer0_Prescaler = TIMER0_PRESCALER_128;
+						errorStatus = E_OK;
+						break;
+					case TIMER_PRESCALER_256 :
+						Timer0_Prescaler = TIMER0_NO_CLOCK;
+						errorStatus = E_NOK;
+						break;
+					case TIMER_PRESCALER_1024 :
+						Timer0_Prescaler = TIMER0_PRESCALER_1024;
+						errorStatus = E_OK;
+						break;
+					default :
+						Timer0_Prescaler = TIMER0_NO_CLOCK;
+						errorStatus = E_NOK;
+						break;
+				}
+				break;
+			case COUNTER_UP_MODE :
+				Timer0_Prescaler = TIMER0_COUNTER_RISING;
+				errorStatus = E_OK;
+				break;
+			case COUNTER_DOWN_MODE :
+				Timer0_Prescaler = TIMER0_COUNTER_FALLING;
+				errorStatus = E_OK;
+				break;
+			default :
+				Timer0_Prescaler = TIMER0_NO_CLOCK;
+				errorStatus = E_NOK;
+				break;
+		}
+	}
+	else
+	{	
+		errorStatus = E_NOK;
+	}
+	return errorStatus;
+}
+
+static ERROR_STATUS Timer1_Init(Timer_cfg_s* Timer_cfg)
+{
+	ERROR_STATUS errorStatus = E_NOK;
+	if(Timer_cfg != NULL)
+	{
+		TCCR1 = Timer1_CMP_Mask;
+		TCNT1 = 0x00;
+		OCR1A = 0x00;
+		TIMSK &= Timer1_Int_CLR_Mask;
+		switch(Timer_cfg->Timer_Polling_Or_Interrupt)
+		{
+			case TIMER_POLLING_MODE :
+				TIMSK |= Timer1_Polling_Int_Mask;
+				errorStatus = E_OK;
+				break;
+			case TIMER_INTERRUPT_MODE :
+				TIMSK |= Timer1_OCA_Int_Mask;
+				errorStatus = E_OK;
+				break;
+			default :
+				errorStatus = E_NOK;
+				break;
+		}
+		switch(Timer_cfg->Timer_Mode)
+		{
+			case TIMER_MODE :
+				switch(Timer_cfg->Timer_Prescaler)
+				{
+					case TIMER_NO_CLOCK :
+						Timer1_Prescaler = TIMER1_NO_CLOCK;
+						errorStatus = E_OK;
+						break;
+					case TIMER_PRESCALER_8 :
+						Timer1_Prescaler = TIMER1_PRESCALER_8;
+						errorStatus = E_OK;
+						break;
+					case TIMER_PRESCALER_32 :
+						Timer1_Prescaler = TIMER1_NO_CLOCK;
+						errorStatus = E_NOK;
+						break;
+					case TIMER_PRESCALER_64 :
+						Timer1_Prescaler = TIMER1_PRESCALER_64;
+						errorStatus = E_OK;
+						break;
+					case TIMER_PRESCALER_128 :
+						Timer1_Prescaler = TIMER1_PRESCALER_128;
+						errorStatus = E_OK;
+						break;
+					case TIMER_PRESCALER_256 :
+						Timer1_Prescaler = TIMER1_NO_CLOCK;
+						errorStatus = E_NOK;
+						break;
+					case TIMER_PRESCALER_1024 :
+						Timer1_Prescaler = TIMER1_PRESCALER_1024;
+						errorStatus = E_OK;
+						break;
+					default :
+						Timer1_Prescaler = TIMER1_NO_CLOCK;
+						errorStatus = E_NOK;
+						break;
+				}
+				break;
+			case COUNTER_UP_MODE :
+				Timer1_Prescaler = TIMER1_COUNTER_RISING;
+				errorStatus = E_OK;
+				break;
+			case COUNTER_DOWN_MODE :
+				Timer1_Prescaler = TIMER1_COUNTER_FALLING;
+				errorStatus = E_OK;
+				break;
+			default :
+				Timer1_Prescaler = TIMER1_NO_CLOCK;
+				errorStatus = E_NOK;
+				break;
+		}
+	}
+	else
+	{
+		errorStatus = E_NOK;
+	}
+	return errorStatus;
+}
+
+static ERROR_STATUS Timer2_Init(Timer_cfg_s* Timer_cfg)
+{
+	ERROR_STATUS errorStatus = E_NOK;
+	if(Timer_cfg != NULL)
+	{
+		TCCR2 = Timer2_CMP_Mask;
+		TCNT2 = Timer2_TCNT_INIT_Mask;
+		TIMSK &= Timer1_Int_CLR_Mask;
+		switch(Timer_cfg->Timer_Polling_Or_Interrupt)
+		{
+			case TIMER_POLLING_MODE :
+				TIMSK |= Timer2_Polling_Int_Mask;
+				errorStatus = E_OK;
+				break;
+			case TIMER_INTERRUPT_MODE :
+				TIMSK |= Timer2_Interrupt_CMP_Int_Mask;
+				errorStatus = E_OK;
+				break;
+			default :
+				errorStatus = E_NOK;
+				break;
+		}
+		switch(Timer_cfg->Timer_Mode)
+		{
+			case TIMER_MODE :
+				switch(Timer_cfg->Timer_Prescaler)
+				{
+					case TIMER_NO_CLOCK :
+						Timer2_Prescaler = TIMER2_NO_CLOCK;
+						errorStatus = E_OK;
+						break;
+					case TIMER_PRESCALER_8 :
+						Timer2_Prescaler = TIMER2_PRESCALER_8;
+						errorStatus = E_OK;
+						break;
+					case TIMER_PRESCALER_32 :
+						Timer2_Prescaler = TIMER2_PRESCALER_32;
+						errorStatus = E_OK;
+						break;
+					case TIMER_PRESCALER_64 :
+						Timer2_Prescaler = TIMER2_PRESCALER_64;
+						errorStatus = E_OK;
+						break;
+					case TIMER_PRESCALER_128 :
+						Timer2_Prescaler = TIMER2_PRESCALER_128;
+						errorStatus = E_OK;
+						break;
+					case TIMER_PRESCALER_256 :
+						Timer2_Prescaler = TIMER2_PRESCALER_256;
+						errorStatus = E_OK;
+						break;
+						case TIMER_PRESCALER_1024 :
+						Timer2_Prescaler = TIMER2_PRESCALER_1024;
+						errorStatus = E_OK;
+						break;
+					default :
+						Timer2_Prescaler = TIMER2_NO_CLOCK;
+						errorStatus = E_NOK;
+						break;
+				}
+				break;
+			default :
+				Timer2_Prescaler = TIMER2_NO_CLOCK;
+				errorStatus = E_NOK;
+				break;
+		}
+	}
+	else
+	{
+		errorStatus = E_NOK;
+	}
+	return errorStatus;
+}
 
 /**
  * Input: 
@@ -200,163 +360,52 @@ ERROR_STATUS Timer_Init(Timer_cfg_s* Timer_cfg)
  * Output:
  * In/Out:			
  * Return: The error status of the function.			
- * Description: This function starts the needed timer.
+ * Description: This function strats the needed timer.
  * 							
  */
-ERROR_STATUS Timer_Start(uint8_t Timer_CH_NO, uint16_t Timer_Count){
-	
-	ERROR_STATUS status = E_OK;
-	
-		if (Timer_CH_NO > TIMER_CHANNEL_NUMBER)
-		{
-			status = E_NOK;
-		}else
-		{
-			
-	switch(Timer_CH_NO){
-		
-		case TIMER_CH0:
-				
-				if (gu8_Timer0initFlag == NOT_INITIALIZED)
-				{
-					status = E_NOK;
-				}
-				else{
-			
-			switch(gu8_Prescaler){
-		
-				case TIMER_NO_CLOCK:
-						TCCR0 |= TIMER_NO_CLOCK; 
-						break;
-		
-				case TIMER_PRESCALER_NO:
-						TCCR0 |= TIMER_PRESCALER_NO;
-						break;
-				
-				case TIMER_PRESCALER_8:
-						TCCR0 |= TIMER_PRESCALER_8;
-						break;
-				
-				case TIMER_PRESCALER_64:
-					/* prescaler64 is mapped to 3 which is 32 in our defines*/
-						TCCR0 |=TIMER_PRESCALER_32;
-						break;
-				
-				case TIMER_PRESCALER_256:
-					/* prescaler256 is mapped to 4 which is 64 in our defines*/
-						TCCR0 |=TIMER_PRESCALER_64;
-						break;
-				
-				case TIMER_PRESCALER_1024:
-					/* prescaler1024 is mapped to 5 which is 32 in our defines*/
-						TCCR0 |=TIMER_PRESCALER_128;
-						break;
-				default:
-					status = E_NOK;
-			}
-		TCNT0 = Timer_Count;
-		}/* end of else */
-				
-			break;
-		
-		case TIMER_CH1:
-				if (gu8_Timer1initFlag == NOT_INITIALIZED)
-				{
-				 	status = E_NOK;
-				  }
-				  else{
-           	
-			  	switch(gu8_Prescaler){
-           		
-           			case TIMER_NO_CLOCK:
-           				TCCR1B |= TIMER_NO_CLOCK;
-           				break;
-           		
-           			case TIMER_PRESCALER_NO:
-           				TCCR1B |= TIMER_PRESCALER_NO;
-           				break;
-           		
-           			case TIMER_PRESCALER_8:
-           				TCCR1B |= TIMER_PRESCALER_8;
-           				break;
-           		
-           			case TIMER_PRESCALER_64:
-           			/* prescaler64 is mapped to 3 which is 32 in our defines*/
-           				TCCR1B |=TIMER_PRESCALER_32;
-           				break;
-           		
-           		case TIMER_PRESCALER_256:
-           			/* prescaler256 is mapped to 4 which is 64 in our defines*/
-           				TCCR1B |=TIMER_PRESCALER_64;
-           				break;
-           		
-           		case TIMER_PRESCALER_1024:
-           			/* prescaler1024 is mapped to 5 which is 32 in our defines*/
-           				TCCR1B |=TIMER_PRESCALER_128;
-           				break;
-				default:
-						status = E_NOK;
-           		}
-           TCNT1H = (Timer_Count>>8);
-           TCNT1L = Timer_Count;
-		   	}/* end of else */
-           	
-           	break;
-			   	
-		case TIMER_CH2:
-				if (gu8_Timer2initFlag == NOT_INITIALIZED)
-				{
-					status = E_NOK;
-				}
-				else{
-					
-					switch(gu8_Prescaler){
-						
-						case TIMER_NO_CLOCK:
-							TCCR2 |= TIMER_NO_CLOCK;
-							break;
-						
-						case TIMER_PRESCALER_NO:
-							TCCR2 |= TIMER_PRESCALER_NO;
-							break;
-						
-						case TIMER_PRESCALER_8:
-							TCCR2 |= TIMER_PRESCALER_8;
-							break;
-						
-						case TIMER_PRESCALER_32:
-							TCCR2 |= TIMER_PRESCALER_32;
-							break;
-						
-						case TIMER_PRESCALER_64:
-							TCCR2 |= TIMER_PRESCALER_64;
-							break;
-						
-						case TIMER_PRESCALER_128:
-							TCCR2 |= TIMER_PRESCALER_128;
-							break;
-						
-						case TIMER_PRESCALER_256:
-							TCCR2 |= TIMER_PRESCALER_256;
-							break;
-						
-						case TIMER_PRESCALER_1024:
-							TCCR2 |= TIMER_PRESCALER_1024;
-							break;
-						
-						default: 
-								status = E_NOK;
-					}
-				TCNT2 = Timer_Count;
 
-				}/* end of else */
-					
-				break;	
-		default:
-			status = E_NOK;
-	} /* end of channel switch */
-   }/*end of outer else */	
- return status;
+ERROR_STATUS Timer_Start(uint8_t Timer_CH_NO, uint16_t Timer_Count)
+{
+	ERROR_STATUS errorStatus = E_NOK;
+	switch(Timer_CH_NO)
+	{
+		case TIMER_CH0 :
+			if(Timer_Count <= 255)
+			{
+				TCNT0 = 0x00;
+				OCR0  = Timer_Count;
+				TCCR0 |= Timer0_Prescaler;
+				errorStatus = E_OK;
+			}
+			else
+			{
+				errorStatus = E_NOK;
+			}
+			break;
+		case TIMER_CH1 :
+			TCNT1 = 0x0000;
+			OCR1A = Timer_Count;
+			TCCR1 |= Timer1_Prescaler;
+			errorStatus = E_OK;
+			break;
+		case TIMER_CH2 :
+			if(Timer_Count <= 255)
+			{
+				TCNT2 = 0x00;
+				OCR2  = Timer_Count;
+				TCCR2 |= Timer2_Prescaler;
+				errorStatus = E_OK;
+			}
+			else
+			{
+				errorStatus = E_NOK;
+			}
+			break;
+		default :
+			errorStatus = E_NOK;
+			break;
+	}
+	return errorStatus;
 }
 
 /**
@@ -369,68 +418,29 @@ ERROR_STATUS Timer_Start(uint8_t Timer_CH_NO, uint16_t Timer_Count){
  * 							
  */
 
-ERROR_STATUS Timer_Stop(uint8_t Timer_CH_NO){
-	
-	ERROR_STATUS status = E_OK;
-	
-	if (Timer_CH_NO > TIMER_CHANNEL_NUMBER)
+ERROR_STATUS Timer_Stop(uint8_t Timer_CH_NO)
+{
+	ERROR_STATUS errorStatus = E_NOK;
+	switch(Timer_CH_NO)
 	{
-		status = E_NOK;
+		case TIMER_CH0 :
+			TCCR0 = TIMER0_NO_CLOCK;
+			errorStatus = E_OK;
+			break;
+		case TIMER_CH1 :
+			TCCR1 = TIMER1_NO_CLOCK;
+			errorStatus = E_OK;
+			break;
+		case TIMER_CH2 :
+			TCCR2 = TIMER2_NO_CLOCK;
+			errorStatus = E_OK;
+			break;
+		default :
+			errorStatus = E_NOK;
+			break;
 	}
-	else{
-		switch(Timer_CH_NO){
-			
-			case TIMER_CH0:
-			
-			         if (gu8_Timer0initFlag == NOT_INITIALIZED)
-			         {
-			         	status = E_NOK;
-			         }
-			         else{
-			         	
-			         	TCCR0 &= TIMER_NO_CLOCK;
-			         	TIFR |= (TOV0);
-			         	gu8_Timer0initFlag = NOT_INITIALIZED;
-			         }
-					 
-			         break;
-			
-			case TIMER_CH1:
-			
-			            if (gu8_Timer1initFlag == NOT_INITIALIZED)
-			            {
-			            	status = E_NOK;
-			            }
-			            else{
-			            	
-			            	TCCR1B &= TIMER_NO_CLOCK;
-			            	TIFR |= (TOV1);
-			            	gu8_Timer1initFlag = NOT_INITIALIZED;
-			            }
-						
-			            break;
-			
-			case TIMER_CH2:
-			
-			       if (gu8_Timer2initFlag == NOT_INITIALIZED)
-			       {
-			       	status = E_NOK;
-			       }
-			       else{
-			       	
-			       	TCCR2 &= TIMER_NO_CLOCK;
-			       	TIFR |= (TOV2);
-			       	gu8_Timer2initFlag = NOT_INITIALIZED;
-			       }
-				   
-			       break;
-			
-			default:
-					status = E_NOK;
-			} /* end of channel switch */
-		}
-		return status;
-	}
+	return errorStatus;
+}
 
 /**
  * Input: 
@@ -443,55 +453,36 @@ ERROR_STATUS Timer_Stop(uint8_t Timer_CH_NO){
  * 							
  */
 
-ERROR_STATUS Timer_GetStatus(uint8_t Timer_CH_NO, uint8_t* Data)	 
+ERROR_STATUS Timer_GetStatus(uint8_t Timer_CH_NO, bool* Data)
 {
-	
-	ERROR_STATUS status = E_OK;
-	
-		if (Timer_CH_NO > TIMER_CHANNEL_NUMBER)
+	ERROR_STATUS errorStatus = E_NOK;
+	if(Data != NULL)
+	{
+		switch(Timer_CH_NO)
 		{
-			status = E_NOK;
+			case TIMER_CH0 :
+				*Data = (TIFR & Timer0_TIFR_OCBit);
+				errorStatus = E_OK;
+				break;
+			case TIMER_CH1 :
+				*Data = (TIFR & Timer1_TIFR_OCBit);
+				errorStatus = E_OK;
+				break;
+			case TIMER_CH2 :
+				*Data = (TIFR & Timer2_TIFR_OCBit);
+				errorStatus = E_OK;
+				break;
+			default :
+				errorStatus = E_NOK;
+				break;
 		}
-		else{
-	
-	switch(Timer_CH_NO){
-		
-		case TIMER_CH0:
-				if (gu8_Timer0initFlag == NOT_INITIALIZED)
-				{
-					status = E_NOK;
-				}
-				else{
-					*Data = TIFR & (TOV0);
-					}
-				break;
-		
-		case TIMER_CH1:
-				if (gu8_Timer1initFlag == NOT_INITIALIZED)
-				{
-					status = E_NOK;
-				}
-				else{
-					*Data = TIFR & (TOV1);
-				}
-				break;
-				
-		case TIMER_CH2:
-				if (gu8_Timer2initFlag == NOT_INITIALIZED)
-				{
-					status = E_NOK;
-				}
-				else{
-					*Data = TIFR & (TOV2);
-				}
-				break;
-		default:
-				status = E_NOK;
-		}
-	} /*end of else */
-	return status;
+	}
+	else
+	{
+		errorStatus = E_NOK;
+	}
+	return errorStatus;
 }
-
 
 /**
  * Input: 
@@ -503,60 +494,34 @@ ERROR_STATUS Timer_GetStatus(uint8_t Timer_CH_NO, uint8_t* Data)
  * Description: This function is used to return the value of the timer.
  * 							
  */
+
 ERROR_STATUS Timer_GetValue(uint8_t Timer_CH_NO, uint16_t* Data)
 {
-	
-	ERROR_STATUS status = E_OK;
-	
-		if (Timer_CH_NO > TIMER_CHANNEL_NUMBER)
+	ERROR_STATUS errorStatus = E_NOK;
+	if(Data != NULL)
+	{
+		switch(Timer_CH_NO)
 		{
-			status = E_NOK;
+			case TIMER_CH0 :
+				*Data = TCNT0;
+				errorStatus = E_OK;
+				break;
+			case TIMER_CH1 :
+				*Data = TCNT1;
+				errorStatus = E_OK;
+				break;
+			case TIMER_CH2 :
+				*Data = TCNT2;
+				errorStatus = E_OK;
+				break;
+			default :
+				errorStatus = E_NOK;
+				break;
 		}
-		else{
-	         switch(Timer_CH_NO){
-	         	
-	         	case TIMER_CH0:
-	         			if (gu8_Timer0initFlag == NOT_INITIALIZED)
-	         			{
-	         				status = E_NOK;
-	         			}
-	         			else{
-	         				*Data = TCNT0;
-	         			}
-	         			break;
-	         	
-	         	case TIMER_CH1:
-	         	       if (gu8_Timer1initFlag == NOT_INITIALIZED)
-	         	       {
-	         	       	status = E_NOK;
-	         	       }
-	         	       else{
-	         	       		*Data = (TCNT1H <<8 ) | TCNT1L;
-	         	       }
-	         	       	break;
-	         			   
-	         	case TIMER_CH2:
-                        if (gu8_Timer2initFlag == NOT_INITIALIZED)
-                        {
-                        	status = E_NOK;
-                        }
-                        else{
-                        	*Data = TCNT2;
-                        }			
-	                 	break;
-	         	default:
-	         			status = E_NOK;
-	         }
-		}/*end of else */
-		
-	return status;
+	}
+	else
+	{
+		errorStatus = E_NOK;
+	}
+	return errorStatus;
 }
-
-
-
-
-
-
-
-
-

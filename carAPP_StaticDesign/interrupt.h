@@ -1,16 +1,15 @@
 /*
  * interrupt.h
  *
- *  Author: Abdallah Heidar
- */ 
-
+ *  Created on: Dec 9, 2019
+ *      Author: ahmad
+ */
 
 #ifndef INTERRUPT_H_
 #define INTERRUPT_H_
 
+#include "registers.h"
 
- /* macros for vectors from vectors table */ 
- 
 #define INT0_vect			__vector_1
 #define INT1_vect			__vector_2
 #define INT2_vect			__vector_3
@@ -32,17 +31,11 @@
 #define TWI_vect			__vector_19
 #define SPM_RDY_vect		__vector_20
 
-/* macro to tell the compiler not to optimize this code */
-
 #define ISR(vector, ...)            \
-void vector (void) __attribute__ ((signal, used, externally_visible)) __VA_ARGS__; \
-void vector (void)
- /* use assembly to clear and set the global interrupt flag */
+   void vector (void) __attribute__ ((signal, used, externally_visible)) __VA_ARGS__; \
+   void vector (void)
+
 #define sei()  __asm__ __volatile__ ("sei" ::)
 #define cli()  __asm__ __volatile__ ("cli" ::)
 
-
 #endif /* INTERRUPT_H_ */
-
-
-

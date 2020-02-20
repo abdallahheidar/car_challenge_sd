@@ -4,35 +4,12 @@
  *  Author: Abdallah Heidar
  */ 
 
-
-/************************************************************************/
-/*				 INCLUDES										        */
-/************************************************************************/
-
-
 #include "DIO.h"
+#include "registers.h"
 
-
-
-
-
-/************************************************************************/
-/*			  Structures Definitions		                            */
-/************************************************************************/
-
-/* for testing */
-
- struct DIO_Cfg_s dio = 
-{
-	GPIOA,
-	FULL_PORT,
-	OUTPUT
-};
-
-/************************************************************************/
-/*		         TIMER FUNCTIONS' implementation				        */
-/************************************************************************/
-
+/***********************************************************************
+*							Functions' Definitions                     *
+***********************************************************************/
 
 /*
 *Input: DIO_Cfg_s -> to get PORT name, pins to be initiated and the required direction
@@ -41,70 +18,40 @@
 *Description: This function can set the direction of a full port, a nibble
 * 			  or even one pin.
 */
-ERROR_STATUS DIO_init (DIO_Cfg_s *DIO_info){
-	
-	ERROR_STATUS status = E_OK;
-	
-	if (DIO_info == NULL)
+ERROR_STATUS DIO_init (DIO_Cfg_s *DIO_info)
+{
+	ERROR_STATUS errorStatus = E_NOK;
+	if(DIO_info != NULL)
 	{
-		status = E_NOK;
-	}else{
-		switch(DIO_info->GPIO){
-			
-			case 0:
-			       if ( DIO_info->dir == INPUT )
-			       {
-			       	PORTA_DIR &= ~(DIO_info->pins); //clear the bits to be inputs
-			       }
-			       else{
-			       	PORTA_DIR |= DIO_info->pins;
-			       }
-				   
-			       break;
-				   
-			case 1:
-			       if ( DIO_info->dir == INPUT )
-			       {
-				       PORTB_DIR &= ~(DIO_info->pins); //clear the bits to be inputs
-			       }
-			       else{
-				       PORTB_DIR |= DIO_info->pins;
-			       }
-			
-					break;
-			
-			case 2:
-			      if ( DIO_info->dir == INPUT )
-			      {
-			      	PORTC_DIR &= ~(DIO_info->pins); //clear the bits to be inputs
-			      }
-			      else{
-			      	PORTC_DIR |= DIO_info->pins;
-			      }
-			
-					break;
-			
-			case 3:
-			      if ( DIO_info->dir == INPUT )
-			      {
-			      	PORTD_DIR &= ~(DIO_info->pins); //clear the bits to be inputs
-			      }
-			      else{
-			      	PORTD_DIR |= DIO_info->pins;
-			      }
-			      
-				  break;
-			
-			default:
-					status = E_NOK;
+		switch(DIO_info->GPIO)
+		{
+			case GPIOA :
+			PORTA_DIR = (DIO_info->dir & DIO_info->pins) | (~(DIO_info->pins) & PORTA_DIR);
+			errorStatus = E_OK;
+			break;
+			case GPIOB :
+			PORTB_DIR = (DIO_info->dir & DIO_info->pins) | (~(DIO_info->pins) & PORTB_DIR);
+			errorStatus = E_OK;
+			break;
+			case GPIOC :
+			PORTC_DIR = (DIO_info->dir & DIO_info->pins) | (~(DIO_info->pins) & PORTC_DIR);
+			errorStatus = E_OK;
+			break;
+			case GPIOD :
+			PORTD_DIR = (DIO_info->dir & DIO_info->pins) | (~(DIO_info->pins) & PORTD_DIR);
+			errorStatus = E_OK;
+			break;
+			default :
+			errorStatus = E_NOK;
+			break;
 		}
-		
-	}/* END OF ELSE */
-	
-	return status;
+	}
+	else
+	{
+		errorStatus = E_NOK;
+	}
+	return errorStatus;
 }
-
-
 /*
 *Input: GPIO -> to get PORT name
 *					- GPIOA
@@ -131,56 +78,32 @@ ERROR_STATUS DIO_init (DIO_Cfg_s *DIO_info){
 *Description: This function can set the value of a full port, a nibble
 * 			  or even one pin.
 */
-ERROR_STATUS DIO_Write (uint8_t GPIO, uint8_t u8_pins, uint8_t u8_value){
-	
-		ERROR_STATUS status = E_OK;
-		
-			if (!(GPIO >=0 && GPIO <=3) || !(u8_pins >=0 && u8_pins <=7))
-			{
-				status = E_NOK;
-				
-			}else{
-				
-	       switch(GPIO){
-		      
-		      case 0:
-					 PORTA_DATA &= ~(u8_pins);
-					 if (u8_value != LOW)
-					  {
-					  	PORTA_DATA |= u8_pins;
-					  }
-					  break;
-					  
-		      case 1:
-		             PORTB_DATA &= ~(u8_pins);
-		             if (u8_value != LOW)
-		             {
-		             	PORTB_DATA |= u8_pins;
-		             }
-		             break;
-					 
-		      case 2:
-		            PORTC_DATA &= ~(u8_pins);
-		            if (u8_value != LOW)
-		            {
-		            	PORTC_DATA |= u8_pins;
-		            }
-		            break;
-					
-		      case 3:
-		            PORTD_DATA &= ~(u8_pins);
-		            if (u8_value != LOW)
-		            {
-			            PORTD_DATA |= u8_pins;
-		            }
-		            break;
-					
-		      default: 
-					status = E_NOK;
-	  }
-	  
-	 } /* end of else */
-	return status;	
+ERROR_STATUS DIO_Write(uint8_t GPIO, uint8_t pins, uint8_t value)
+{
+	ERROR_STATUS errorStatus = E_NOK;
+	switch(GPIO)
+	{
+		case GPIOA :
+		PORTA_DATA = (pins & value) | (~pins & PORTA_DATA);
+		errorStatus = E_OK;
+		break;
+		case GPIOB :
+		PORTB_DATA = (pins & value) | (~pins & PORTB_DATA);
+		errorStatus = E_OK;
+		break;
+		case GPIOC :
+		PORTC_DATA = (pins & value) | (~pins & PORTC_DATA);
+		errorStatus = E_OK;
+		break;
+		case GPIOD :
+		PORTD_DATA = (pins & value) | (~pins & PORTD_DATA);
+		errorStatus = E_OK;
+		break;
+		default :
+		errorStatus = E_NOK;
+		break;
+	}
+	return errorStatus;
 }
 
 /*
@@ -209,40 +132,41 @@ ERROR_STATUS DIO_Write (uint8_t GPIO, uint8_t u8_pins, uint8_t u8_value){
 *Description: This function gets the value of a full port, a nibble
 * 			  or even one pin.
 */
-ERROR_STATUS DIO_Read (uint8_t GPIO,uint8_t u8_pins, uint8_t *data){
-	
-	
-	ERROR_STATUS status = E_OK;
-		
-		if (!(GPIO >=0 && GPIO <=3) || !(u8_pins >=0 && u8_pins <=7))
-		{
-			status = E_NOK;
-			
-		}else{
-			
-		switch(GPIO){
-			
-			case 0:
-					*data =	 (PORTA_PIN & u8_pins ) ;
-					break;
-			
-			case 1:
-					*data =	 (PORTB_PIN & u8_pins ) ;
-					break;
-			
-			case 2:
-					*data =	 (PORTC_PIN & u8_pins ) ;
-					break;
-			case 3:
-					*data =	(PORTD_PIN & u8_pins ) ;
-					break;
-			default: 
-			   status = E_NOK;
-		}
-	} /*end of else */
-		return status;
-}
+ERROR_STATUS DIO_Read (uint8_t GPIO,uint8_t pins, uint8_t *data)
+{
 
+	ERROR_STATUS errorStatus = E_NOK;
+	if(data != NULL)
+	{
+		switch(GPIO)
+		{
+			case GPIOA :
+			*data = (PORTA_PIN & pins);
+			errorStatus = E_OK;
+			break;
+			case GPIOB :
+			*data = (PORTB_PIN & pins);
+			errorStatus = E_OK;
+			break;
+			case GPIOC :
+			*data = (PORTC_PIN & pins);
+			errorStatus = E_OK;
+			break;
+			case GPIOD :
+			*data = (PORTD_PIN & pins);
+			errorStatus = E_OK;
+			break;
+			default :
+			errorStatus = E_NOK;
+			break;
+		}
+	}
+	else
+	{
+		errorStatus = E_NOK;
+	}
+	return errorStatus;
+}
 /*
 *Input: GPIO -> to get PORT name
 *					- GPIOA
@@ -260,44 +184,36 @@ ERROR_STATUS DIO_Read (uint8_t GPIO,uint8_t u8_pins, uint8_t *data){
 *					- PIN7
 *					- UPPER_NIBBLE
 *					- LOWER_NIBBLE
-*    				- FULL_PORT
+*					- FULL_PORT
 *Output: data -> No output
 *In/Out:
 *Description: This function toggles the value of a full port, a nibble
 * 			  or even one pin.
 */
-ERROR_STATUS DIO_Toggle (uint8_t GPIO, uint8_t u8_pins){
-	
-	ERROR_STATUS status = E_OK;
-		
-		if (!(GPIO >=0 && GPIO <=3) || !(u8_pins >=0 && u8_pins <=7))
-		{
-			status = E_NOK;
-			
-			}
-			else{
-	
-	             switch(GPIO){
-	             	
-	             	case 0:
-	             			PORTA_DATA ^= u8_pins;
-	             			break;
-	             	
-	             	case 1:
-	             			PORTB_DATA ^= u8_pins;
-	             			break;
-	             	
-	             	case 2:
-	             			PORTC_DATA ^= u8_pins;
-	             			break;
-	             	
-	             	case 3:
-	             			PORTD_DATA ^= u8_pins;
-	             			break;
-	             	default: 
-	             			status = E_NOK;
-	             }
-			}/*end of else */
-				 
-	return status;
+ERROR_STATUS DIO_Toggle(uint8_t GPIO, uint8_t pins)
+{
+	ERROR_STATUS errorStatus = E_NOK;
+	switch(GPIO)
+	{
+		case GPIOA :
+		PORTA_DATA = (pins & (~PORTA_DATA)) | (~pins & PORTA_DATA);
+		errorStatus = E_OK;
+		break;
+		case GPIOB :
+		PORTB_DATA = (pins & (~PORTB_DATA)) | (~pins & PORTB_DATA);
+		errorStatus = E_OK;
+		break;
+		case GPIOC :
+		PORTC_DATA = (pins & (~PORTC_DATA)) | (~pins & PORTC_DATA);
+		errorStatus = E_OK;
+		break;
+		case GPIOD :
+		PORTD_DATA = (pins & (~PORTD_DATA)) | (~pins & PORTD_DATA);
+		errorStatus = E_OK;
+		break;
+		default :
+		errorStatus = E_NOK;
+		break;
+	}
+	return errorStatus;
 }

@@ -3,18 +3,14 @@
  *
  *  Author: Abdallah Heidar
  */ 
-
-/************************************************************************/
-/*				 INCLUDES			        */
-/************************************************************************/
-
-
 #include "Us.h"
 
+/*--------------[ Static Globals ]-------------*/
 
-/************************************************************************/
-/*				   functions' prototypes	                            */
-/************************************************************************/
+static DIO_Cfg_s Trig_Pin, Echo_Pin;
+
+
+/*--------------[ Functions' Definitions ]-------------*/
 
 /****************************************************************************************************
  * Function Name   : Us_Init.                                                                       *
@@ -28,33 +24,29 @@
  *                                                                                                  *
  *                                                                                                  *
  ***************************************************************************************************/
-
 ERROR_STATUS Us_Init(void)
 {
-	ERROR_STATUS status = E_OK;
+	ERROR_STATUS errorStatus = E_NOK;
+	Icu_cfg_s Us_ICU;
 	
-	/* initialize pin3 as output */
-	DIO_Cfg_s str_Dio = {
-		GPIOB,
-		PIN3,
-		OUTPUT
-	};
-	status = 	DIO_init(&str_Dio);
+	Us_ICU.ICU_Ch_No = ICU_CH2;
+	Us_ICU.ICU_Ch_Timer = TIMER_CH2;
 	
-
-	/* initialize icu on EXT INT2 and timer0 */
-	Icu_cfg_s str_Icu = {
-	ICU_CH2,
-	ICU_TIMER_CH0
-	};
-	status = Icu_Init(&str_Icu);
+	Trig_Pin.GPIO = GPIOB;
+	Trig_Pin.pins = BIT1;
+	Trig_Pin.dir = OUTPUT;
 	
-	return status;
+	Echo_Pin.GPIO = GPIOB;
+	Echo_Pin.pins = BIT2;
+	Echo_Pin.dir = INPUT;
+	
+	DIO_init(&Trig_Pin);
+	DIO_init(&Echo_Pin);
+	Icu_Init(&Us_ICU);
+	
+	errorStatus = E_OK;
+	return errorStatus;
 }
-
-
-
-
 
 /**************************************************************************************************
  * Function Name    : Us_Trigger.                                                                 *
@@ -66,20 +58,15 @@ ERROR_STATUS Us_Init(void)
  *                    the  ECUO signal                                                            *
  *************************************************************************************************/
 
-
 ERROR_STATUS Us_Trigger(void)
 {
-	ERROR_STATUS status = E_OK;
-	/* Trigger pulse */
-	status =  DIO_Write(GPIOB, PIN3, HIGH);
-	softwareDelayMs(1);
-	status =  DIO_Write(GPIOB, PIN3, LOW);
-	return status;
+	ERROR_STATUS errorStatus = E_NOK;
+	DIO_Write(Trig_Pin.GPIO, Trig_Pin.pins, HIGH);
+	Timer_Delay_Us(TIMER_CH0, 20);
+	DIO_Write(Trig_Pin.GPIO, Trig_Pin.pins, LOW);
+	errorStatus = E_OK;
+	return errorStatus;
 }
-
-
-
-
 
 /**************************************************************************************************
  * Function Name    : Us_GetDistance.                                                             *
@@ -92,17 +79,12 @@ ERROR_STATUS Us_Trigger(void)
  *                    Distance parameter.                                                         *
  *************************************************************************************************/
 
-
-ERROR_STATUS Us_GetDistance(uint8_t *Distance)
+ERROR_STATUS Us_GetDistance(uint8_t* Distance)
 {
-	ERROR_STATUS status = E_OK;
-		uint8_t time = 0; 
-	status =  Icu_ReadTime(ICU_TIMER_CH0, ICU_RISE_TO_FALL , &time);
-		
-		
-		/*58 to map time to distance */
-		*Distance = time / 58;
-	//PORTD_DATA = *Distance;
-	
-	return status;
+	ERROR_STATUS errorStatus = E_NOK;
+	uint32_t time = 0;
+ 	Icu_ReadTime(ICU_CH2, ICU_FALE_TO_RISE, &time);
+	Us_Read(Distance);
+	errorStatus = E_OK;
+	return errorStatus;
 }
